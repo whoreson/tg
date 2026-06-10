@@ -4233,11 +4233,7 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
     print_chat_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
   } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHANNEL) {
     print_channel_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
-  } else {
-    assert (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT);
-    print_encr_chat_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
   }
-
   if (tgl_get_peer_type (M->from_id) == TGL_PEER_USER) {
     mprintf (ev, " ");
     print_user_name (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
@@ -4377,7 +4373,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " <<< ");
       } else {
-        mprintf (ev, " ««« ");
+        mprintf (ev, " ÃÂ«ÃÂ«ÃÂ« ");
       }
     } else {
       mpush_color (ev, COLOR_BLUE);
@@ -4391,7 +4387,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " >>> ");
       } else {
-        mprintf (ev, " »»» ");
+        mprintf (ev, " ÃÂ»ÃÂ»ÃÂ» ");
       }
     }
   } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT) {
@@ -4409,7 +4405,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " <<< ");
       } else {
-        mprintf (ev, " ««« ");
+        mprintf (ev, " ÃÂ«ÃÂ«ÃÂ« ");
       }
     } else {
       mpush_color (ev, COLOR_BLUE);
@@ -4422,7 +4418,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " >>> ");
       } else {
-        mprintf (ev, " »»» ");
+        mprintf (ev, " ÃÂ»ÃÂ»ÃÂ» ");
       }
     }
   }
@@ -4450,7 +4446,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     if (M->flags & TGLMF_UNREAD) {
       mprintf (ev, " >>> ");
     } else {
-      mprintf (ev, " »»» ");
+      mprintf (ev, " ÃÂ»ÃÂ»ÃÂ» ");
     }
 
   } else {
@@ -4478,7 +4474,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     if (M->flags & TGLMF_UNREAD) {
       mprintf (ev, " >>> ");
     } else {
-      mprintf (ev, " »»» ");
+      mprintf (ev, " ÃÂ»ÃÂ»ÃÂ» ");
     }
   }
   if (tgl_get_peer_type (M->fwd_from_id) > 0) {
