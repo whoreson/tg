@@ -7,7 +7,7 @@ CPPFLAGS=@CPPFLAGS@ @OPENSSL_INCLUDES@
 DEFS=@DEFS@
 COMPILE_FLAGS=${CFLAGS} ${CPFLAGS} ${CPPFLAGS} ${DEFS} -Wall -Wextra -Wno-missing-field-initializers -Wno-deprecated-declarations -fno-strict-aliasing -fno-omit-frame-pointer -ggdb -Wno-unused-parameter -fPIC -Wno-unused-function -Wno-builtin-memcpy-chk-size
 EXTRA_LIBS=@LIBS@ @EXTRA_LIBS@ @OPENSSL_LIBS@
-LOCAL_LDFLAGS=-rdynamic -ggdb -levent ${EXTRA_LIBS} -lpthread -lutil
+LOCAL_LDFLAGS=-Wl,-rpath,'$$ORIGIN/../lib' -rdynamic -ggdb -levent ${EXTRA_LIBS} -lpthread -lutil
 LINK_FLAGS=${LDFLAGS} ${LOCAL_LDFLAGS}
 
 ifneq (${TARGET_OS}, FreeBSD)
@@ -30,13 +30,14 @@ CC=@CC@
 
 PREFIX?=/usr/local
 INSTALL_BIN=$(PREFIX)/bin
+INSTALL_LIB=$(PREFIX)/lib
 INSTALL=install
 
 .SUFFIXES:
 
 .SUFFIXES: .c .h .o
 
-all: ${EXE_LIST} ${DIR_LIST}
+all: ${EXE_LIST} ${LIB}/libtgl.so ${LIB}/libtgl.a ${DIR_LIST}
 create_dirs_and_headers: ${DIR_LIST} ${AUTO}/auto-skip.h ${AUTO}/auto-fetch.h ${AUTO}/auto-store.h ${AUTO}/auto-autocomplete.h ${AUTO}/auto-types.h ${AUTO}/constants.h ${AUTO}/constants.h ${AUTO}/auto-skip.h ${AUTO}/auto-fetch.h ${AUTO}/auto-store.h ${AUTO}/auto-autocomplete.h ${AUTO}/auto-types.h ${AUTO}/auto-fetch-ds.h ${AUTO}/auto-free-ds.h ${AUTO}/auto-store-ds.h ${AUTO}/auto-print-ds.h
 create_dirs: ${DIR_LIST}
 dump-tl: ${EXE}/dump-tl-file
@@ -56,7 +57,7 @@ DEPENDENCE_LIST=${DEPENDENCE}
 ${TG_OBJECTS}: ${OBJ}/%.o: ${srcdir}/%.c | create_dirs_and_headers
 	${CC} ${INCLUDE} ${COMPILE_FLAGS} -c -MP -MD -MF ${DEP}/$*.d -MQ ${OBJ}/$*.o -o $@ $<
 
-${EXE}/telegram-cli: ${TG_OBJECTS} ${LIB}/libtgl.a
+${EXE}/telegram-cli: ${TG_OBJECTS} ${LIB}/libtgl.so
 	${CC} $^ ${LINK_FLAGS} -o $@
 
 clean:
@@ -67,5 +68,10 @@ distclean:
 
 install: all
 	@mkdir -p $(DESTDIR)/$(INSTALL_BIN)
-	$(INSTALL) bin/telegram-cli $(DESTDIR)/$(INSTALL_BIN)
-	rm -rf ${DIR_LIST} config.log config.status > /dev/null || echo "all clean"
+	@mkdir -p $(DESTDIR)/$(INSTALL_LIB)
+	$(INSTALL) bin/telegram-cli $(DESTDIR)/$(INSTALL_BIN)/telegram-cli
+	$(INSTALL) ${LIB}/libtgl.so $(DESTDIR)/$(INSTALL_LIB)/libtgl.so
+	$(INSTALL) ${LIB}/libtgl.a $(DESTDIR)/$(INSTALL_LIB)/libtgl.a
+	strip $(DESTDIR)/$(INSTALL_BIN)/telegram-cli
+	strip $(DESTDIR)/$(INSTALL_LIB)/libtgl.so
+	strip $(DESTDIR)/$(INSTALL_LIB)/libtgl.a
