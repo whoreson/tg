@@ -515,7 +515,7 @@ tgl_peer_id_t parse_input_peer_id (const char *s, int l, int mask) {
   for (i = 0; i < 8; i++) if (!mask || mask == tt[i]) {
     int x = strlen (ss[i]);
     if (l > x && !memcmp (s, ss[i], x)) {
-      int r = atoi (sc + x);
+      long long r = atoll (sc + x);
       tfree_str (sc);
       if (r < 0) { return TGL_PEER_NOT_FOUND; }
       tgl_peer_t *P = tgl_peer_get (TLS, tgl_set_peer_id (tt[i], r));
@@ -703,6 +703,7 @@ void print_channel_info_gw (struct tgl_state *TLS, void *extra, int success, str
 void print_user_info_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_user *C);
 void print_filename_gw (struct tgl_state *TLS, void *extra, int success, const char *name);
 void print_string_gw (struct tgl_state *TLS, void *extra, int success, const char *name);
+void print_peer_permanent_name (struct in_ev *ev, tgl_peer_id_t id);
 void open_filename_gw (struct tgl_state *TLS, void *extra, int success, const char *name);
 void print_secret_chat_gw (struct tgl_state *TLS, void *extra, int success, struct tgl_secret_chat *E);
 void print_card_gw (struct tgl_state *TLS, void *extra, int success, int size, int *card);
@@ -2572,7 +2573,7 @@ void print_peer_gw (struct tgl_state *TLSR, void *extra, int success, tgl_peer_t
     print_channel_gw (TLSR, extra, success, (void *)U);
     break;
   default:
-    assert (0);
+    break;  // ENCR_CHAT and other types - nothing to print
   }
 }
 
@@ -2661,7 +2662,7 @@ void print_chat_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
     mpush_color (ev, COLOR_YELLOW);
     mprintf (ev, "Chat ");
     print_chat_name (ev, U->id, U);
-    mprintf (ev, " (id %d) members:\n", tgl_get_peer_id (U->id));
+    mprintf (ev, " (id %lld) members:\n", tgl_get_peer_id (U->id));
     int i;
     for (i = 0; i < C->user_list_size; i++) {
       mprintf (ev, "\t\t");
@@ -2719,7 +2720,7 @@ void print_channel_info_gw (struct tgl_state *TLSR, void *extra, int success, st
     if (C->username) {
       mprintf (ev, " @%s", C->username);
     }
-    mprintf (ev, " (#%d):\n", tgl_get_peer_id (U->id));
+    mprintf (ev, " (#%lld):\n", tgl_get_peer_id (U->id));
     mprintf (ev, "\tabout: %s\n", C->about);
     mprintf (ev, "\t%d participants, %d admins, %d kicked\n", C->participants_count, C->admins_count, C->kicked_count);
     mpop_color (ev);
@@ -2776,7 +2777,7 @@ void print_user_info_gw (struct tgl_state *TLSR, void *extra, int success, struc
     if (U->username) {
       mprintf (ev, " @%s", U->username);
     }
-    mprintf (ev, " (#%d):\n", tgl_get_peer_id (U->id));
+    mprintf (ev, " (#%lld):\n", tgl_get_peer_id (U->id));
     mprintf (ev, "\tphone: %s\n", U->phone);
     mprintf (ev, "\t");
     print_user_status (&U->status, ev);
@@ -2975,8 +2976,13 @@ void print_read_list (int num, struct tgl_message *list[]) {
         mprintf (ev, "Secret chat ");
         print_encr_chat_name (ev, to_id, tgl_peer_get (TLS, to_id));
         break;
+      case TGL_PEER_CHANNEL:
+        mprintf (ev, "Channel ");
+        print_channel_name (ev, to_id, tgl_peer_get (TLS, to_id));
+        break;
       default:
-        assert (0);
+        mprintf (ev, "Unknown peer ");
+        print_peer_permanent_name (ev, to_id);
       }
       mprintf (ev, " marked read %d outbox and %d inbox messages -- [%d/%02d/%02d %02d:%02d:%02d]\n", c1, c2, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
       mpop_color (ev);
@@ -4079,7 +4085,7 @@ void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
     return;
   }
   if (!U) {
-    mprintf (ev, "user#%d", tgl_get_peer_id (id));
+    mprintf (ev, "user#%lld", tgl_get_peer_id (id));
     int i;
     int ok = 1;
     for (i = 0; i < unknown_user_list_pos; i++) {
@@ -4097,11 +4103,11 @@ void print_user_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *U) {
       mpush_color (ev, COLOR_REDB);
     }
     if ((U->flags & TGLUF_DELETED)) {
-      mprintf (ev, "deleted user#%d", tgl_get_peer_id (id));
+      mprintf (ev, "deleted user#%lld", tgl_get_peer_id (id));
     } else if (!(U->flags & TGLUF_CREATED)) {
-      mprintf (ev, "user#%d", tgl_get_peer_id (id));
+      mprintf (ev, "user#%lld", tgl_get_peer_id (id));
     } else if (use_ids) {
-      mprintf (ev, "user#%d", tgl_get_peer_id (id));
+      mprintf (ev, "user#%lld", tgl_get_peer_id (id));
     } else if (!U->user.first_name || !strlen (U->user.first_name)) {
       mprintf (ev, "%s", U->user.last_name);
     } else if (!U->user.last_name || !strlen (U->user.last_name)) {
@@ -4125,7 +4131,7 @@ void print_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
     return;
   }
   if (!C || use_ids) {
-    mprintf (ev, "chat#%d", tgl_get_peer_id (id));
+    mprintf (ev, "chat#%lld", tgl_get_peer_id (id));
   } else {
     mprintf (ev, "%s", C->chat.title);
   }
@@ -4141,7 +4147,7 @@ void print_channel_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
     return;
   }
   if (!C || use_ids) {
-    mprintf (ev, "channel#%d", tgl_get_peer_id (id));
+    mprintf (ev, "channel#%lld", tgl_get_peer_id (id));
   } else {
     mprintf (ev, "%s", C->channel.title);
   }
@@ -4157,7 +4163,7 @@ void print_encr_chat_name (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
     return;
   }
   if (!C || use_ids) {
-    mprintf (ev, "encr_chat#%d", tgl_get_peer_id (id));
+    mprintf (ev, "encr_chat#%lld", tgl_get_peer_id (id));
   } else {
     mprintf (ev, "%s", C->print_name);
   }
@@ -4179,7 +4185,7 @@ void print_peer_name  (struct in_ev *ev, tgl_peer_id_t id, tgl_peer_t *C) {
     print_encr_chat_name (ev, id, C);
     return;
   default:
-    assert (0);
+    mprintf (ev, "peer#%lld", tgl_get_peer_id (id));
   }
 }
 
@@ -4234,6 +4240,7 @@ void print_service_message (struct in_ev *ev, struct tgl_message *M) {
   } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHANNEL) {
     print_channel_name (ev, M->to_id, tgl_peer_get (TLS, M->to_id));
   }
+
   if (tgl_get_peer_type (M->from_id) == TGL_PEER_USER) {
     mprintf (ev, " ");
     print_user_name (ev, M->from_id, tgl_peer_get (TLS, M->from_id));
@@ -4373,7 +4380,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " <<< ");
       } else {
-        mprintf (ev, " ÃÂ«ÃÂ«ÃÂ« ");
+        mprintf (ev, " <<< ");
       }
     } else {
       mpush_color (ev, COLOR_BLUE);
@@ -4387,7 +4394,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " >>> ");
       } else {
-        mprintf (ev, " ÃÂ»ÃÂ»ÃÂ» ");
+        mprintf (ev, " >>> ");
       }
     }
   } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_ENCR_CHAT) {
@@ -4405,7 +4412,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " <<< ");
       } else {
-        mprintf (ev, " ÃÂ«ÃÂ«ÃÂ« ");
+        mprintf (ev, " <<< ");
       }
     } else {
       mpush_color (ev, COLOR_BLUE);
@@ -4418,7 +4425,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
       if (M->flags & TGLMF_UNREAD) {
         mprintf (ev, " >>> ");
       } else {
-        mprintf (ev, " ÃÂ»ÃÂ»ÃÂ» ");
+        mprintf (ev, " >>> ");
       }
     }
   }
@@ -4446,11 +4453,10 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     if (M->flags & TGLMF_UNREAD) {
       mprintf (ev, " >>> ");
     } else {
-      mprintf (ev, " ÃÂ»ÃÂ»ÃÂ» ");
+      mprintf (ev, " >>> ");
     }
 
-  } else {
-    assert (tgl_get_peer_type (M->to_id) == TGL_PEER_CHANNEL);
+  } else if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHANNEL) {
 
     mpush_color (ev, COLOR_CYAN);
     print_msg_id (ev, M->permanent_id, M);
@@ -4474,7 +4480,7 @@ void print_message (struct in_ev *ev, struct tgl_message *M) {
     if (M->flags & TGLMF_UNREAD) {
       mprintf (ev, " >>> ");
     } else {
-      mprintf (ev, " ÃÂ»ÃÂ»ÃÂ» ");
+      mprintf (ev, " >>> ");
     }
   }
   if (tgl_get_peer_type (M->fwd_from_id) > 0) {

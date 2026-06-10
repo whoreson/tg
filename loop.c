@@ -844,7 +844,9 @@ int loop (void) {
     read_secret_chat_file ();
   //}
 
-  binlog_read = 1;
+  // binlog_read is set after first successful difference sync
+  // to suppress output during the initial flood of updates
+  // binlog_read = 1;
   #ifdef USE_LUA
     lua_binlog_end ();
   #endif
